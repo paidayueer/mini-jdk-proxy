@@ -1,6 +1,6 @@
 package com.study.minijdkproxy;
 
-import java.lang.reflect.Method;
+/*静态代理*/
 
 public class UserServiceProxy implements UserService{
 	UserService target;
