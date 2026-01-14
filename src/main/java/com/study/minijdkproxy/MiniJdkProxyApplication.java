@@ -23,19 +23,18 @@ public class MiniJdkProxyApplication {
 		// UserService proxy0 = new $proxy0(h);
 		// proxy0.login();
 
-		MyInterface proxyObject = MyInterfaceFactory.createProxyObject(new MethodNameHandler());
+		MyInterface proxyObject = MyInterfaceFactory.createProxyObject(new MethodNameHandler(),null);
 		proxyObject.fn1();
 		proxyObject.fn2();
 		proxyObject.fn3();
 
 		System.out.println("-----");
-
-		proxyObject = MyInterfaceFactory.createProxyObject2(new MethodHandler2(),proxyObject);
-		System.out.println(proxyObject.getClass().getName());
+		// 问：这个proxyObject 加入的意义是什么？ 答：套娃，在上一层代理的基础上增加另一层代理。
+		// 目标：让一个代理，包住另一个代理
+		proxyObject = MyInterfaceFactory.createProxyObject(new MethodHandler2(),proxyObject);
 		proxyObject.fn1();
 		proxyObject.fn2();
 		proxyObject.fn3();
-
 
 	}
 	static class MethodNameHandler implements MyHandler {
@@ -48,14 +47,13 @@ public class MiniJdkProxyApplication {
 
 		@Override
 		public String setMethodBody(String methodName) {
-			return "\tSystem.out.println(\"before\");\n" +
-					"\t\t\tmyInterface." +
+
+			return "System.out.println(\"before\");\n" +
+					"\t\t\ttarget." +
 					methodName +
 					"();\n" +
 					"\t\t\tSystem.out.println(\"after\");";
 		}
-
-
 	}
 
 }

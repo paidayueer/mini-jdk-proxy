@@ -1,5 +1,7 @@
 package com.study.minijdkproxy.shengsheng;
 
+import org.springframework.boot.context.properties.bind.DefaultValue;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -17,14 +19,14 @@ public class MyInterfaceFactory {
 	private static String getClassFile(MyHandler h,String className) {
 		// 获取MyInterfaceImpl 文件，增加h，然后创建实例，进行返回
 		String methodName1 = h.setMethodBody("fn1");
-		String methodName2 = h.setMethodBody("fn1");
-		String methodName3 = h.setMethodBody("fn1");
+		String methodName2 = h.setMethodBody("fn2");
+		String methodName3 = h.setMethodBody("fn3");
 		return  "package com.study.minijdkproxy.shengsheng;\n" +
 				"public class " +
 				className +
 				" implements MyInterface{\n" +
 				"\n" +
-				"\tMyInterface myInterface;\n" +
+				"\tMyInterface target;\n" +
 				"\t@Override\n" +
 				"\tpublic void fn1() {\n" +
 				methodName1 +
@@ -41,26 +43,23 @@ public class MyInterfaceFactory {
 				"\t}\n" +
 				"}";
 	}
-	public static MyInterface createProxyObject(MyHandler h) throws IOException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
-		// 1. 写入文件
+	public static MyInterface createProxyObject(MyHandler h,MyInterface target) throws IOException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+		// 获取代理类的内容，并且写进file中，然后用 Complier 编译成字节码
 		String className = setClassName();
-		String originFileString = getClassFile(h,className);
-		File javaFile = new File(className +".java");
-		Files.writeString(javaFile.toPath(),originFileString, StandardCharsets.UTF_8);
-		// 2. 编译文件
+		String originStr = getClassFile(h,className);
+		File javaFile = new File(className+".java");
+		Files.writeString(javaFile.toPath(),originStr);
 		Compiler.compile(javaFile);
-		// 3. 加载文件
+		// loadClass 的类路径是从classes文件夹下开始算
 		Class<?> clazz = MyInterfaceFactory.class.getClassLoader().loadClass("com.study.minijdkproxy.shengsheng."+className);
 		Constructor<?> constructor = clazz.getConstructor();
-		return  (MyInterface)constructor.newInstance();
-
-	}
-	public static MyInterface createProxyObject2(MyHandler h,MyInterface object) throws IOException, ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
-		MyInterface newInstance = createProxyObject(h);
-		// 4.向已经创建好的实例，附上 object 值，这个object就是被代理的实例
-		Field target = newInstance.getClass().getDeclaredField("myInterface");
-		target.setAccessible(true);
-		target.set(newInstance,object);
-		return newInstance;
+		MyInterface proxyObject = (MyInterface) constructor.newInstance();
+		// 这是一个在creatProxyObject 的封装上进行的再一层封装，代理链，并且成员变量中增加了上一层类的对象，便于调用该方法。
+		if (target != null)  {
+			Field targetObject = proxyObject.getClass().getDeclaredField("target");
+			targetObject.setAccessible(true);
+			targetObject.set(proxyObject,target);
+		}
+		return proxyObject;
 	}
 }
